@@ -7,7 +7,7 @@
 
 import UIKit
 
-class DataAndRepeatView: UIView {
+class DateAndRepeatView: UIView {
 
   private let dateLabel: UILabel = {
     let label = UILabel()
