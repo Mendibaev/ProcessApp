@@ -19,7 +19,7 @@ class CalendarCollectionViewCell: UICollectionViewCell {
         return label
     }()
 
-    private let numberOfDayLabel: UILabel = {
+     let numberOfDayLabel: UILabel = {
        let label = UILabel()
         label.text = "29"
         label.font = .robotoBold20()
@@ -60,6 +60,11 @@ class CalendarCollectionViewCell: UICollectionViewCell {
         addSubview(dayOfWeekLabel)
         addSubview(numberOfDayLabel)
     }
+
+  func cellConfigure(weekArray: [[String]], indexPath: IndexPath) {
+    numberOfDayLabel.text = weekArray[1][indexPath.item]
+    dayOfWeekLabel.text = weekArray[0][indexPath.item]
+  }
 
     private func setConstraints() {
         NSLayoutConstraint.activate([

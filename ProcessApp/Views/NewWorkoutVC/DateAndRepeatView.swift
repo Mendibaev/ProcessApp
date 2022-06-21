@@ -18,7 +18,7 @@ class DateAndRepeatView: UIView {
     return label
   }()
 
-  private let datePicker: UIDatePicker = {
+   let datePicker: UIDatePicker = {
     let datePicker = UIDatePicker()
     datePicker.datePickerMode = .date
     datePicker.tintColor = .specialGreen

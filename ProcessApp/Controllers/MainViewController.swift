@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import RealmSwift
 
 class MainViewController: UIViewController {
 
@@ -86,22 +87,31 @@ class MainViewController: UIViewController {
 
     private let idWorkoutTableViewCell = "idWorkoutTableViewCell"
 
+    private let localRealm = try! Realm()
+    private var workoutArray: Results<WorkoutModel>! = nil
+
     override func viewDidLayoutSubviews() {
         userPhotoImageView.layer.cornerRadius = userPhotoImageView.frame.height / 2
     }
 
+  override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    tableView.reloadData()
+  }
+
     override func viewDidLoad() {
         super.viewDidLoad()
-
         setupViews()
         setConstraints()
         setDelegate()
         tableView.register(WorkoutTableViewCell.self, forCellReuseIdentifier: idWorkoutTableViewCell)
+        getWorkout(date: Date())
     }
 
     private func setDelegate() {
         tableView.delegate = self
         tableView.dataSource = self
+      calendarView.cellCollectionViewDelegate = self
     }
 
     private func setupViews() {
@@ -122,7 +132,36 @@ class MainViewController: UIViewController {
       let newWorkoutViewController = NewWorkoutViewController()
       newWorkoutViewController.modalPresentationStyle = .fullScreen
       present(newWorkoutViewController, animated: true)
+//      let workoutParametersViewController = WorkoutParametersViewController()
+//      workoutParametersViewController.modalPresentationStyle = .fullScreen
+//      present(workoutParametersViewController, animated: true)
     }
+
+  private func getWorkout(date: Date) {
+    let calendar = Calendar.current
+    let formatter = DateFormatter()
+    let components = calendar.dateComponents([.weekday, .day, .month, .year], from: date)
+    guard let weekday = components.weekday else { return }
+    guard let day = components.day else { return }
+    guard let month = components.month else { return }
+    guard let year = components.year else { return }
+
+    formatter.timeZone = TimeZone(abbreviation: "UTC")
+    formatter.dateFormat = "yyyy/MM/dd HH:mm"
+
+    guard let dateStart = formatter.date(from: "\(year)/\(month)/\(day) 00:00") else { return }
+    let dateEnd: Date = {
+      let components = DateComponents(day: 1, second: -1)
+      return Calendar.current.date(byAdding: components, to: dateStart) ?? Date()
+    }()
+
+    let predicateRepeat = NSPredicate(format: "workoutNumberOfDay = \(weekday) AND workoutRepeat = true")
+    let predicateUnrepeat = NSPredicate(format: "workoutRepeat = false AND workoutDate BETWEEN %@", [dateStart, dateEnd])
+    let compound = NSCompoundPredicate(type: .or, subpredicates: [predicateRepeat,predicateUnrepeat])
+
+    workoutArray = localRealm.objects(WorkoutModel.self).filter(compound).sorted(byKeyPath: "workoutName")
+    tableView.reloadData() 
+  }
 }
 
 // MARK: - UITableViewDataSource
@@ -130,13 +169,34 @@ class MainViewController: UIViewController {
 extension MainViewController: UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        10
+      workoutArray.count
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: idWorkoutTableViewCell, for: indexPath) as! WorkoutTableViewCell
+      let model = workoutArray[indexPath.row]  
+      cell.cellConfigure(model: model)
+      cell.cellStartWorkoutDelegate = self
         return cell
     }
+}
+
+extension MainViewController: StartWorkoutProtocol {
+
+  func startButtonTapped(model: WorkoutModel) {
+    print("tap")
+    if model.workoutTimer == 0 {
+      let workoutParametersViewController = WorkoutParametersViewController()
+    workoutParametersViewController.modalPresentationStyle = .fullScreen
+      workoutParametersViewController.workoutModel = model
+    present(workoutParametersViewController, animated: true, completion: nil)
+    } else {
+      print("timer view")
+    }
+
+  }
+
+
 }
 
 //MARK: - UITableViewDelegate
@@ -146,6 +206,16 @@ extension MainViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         100
     }
+}
+
+//MARK: - SelectCollectionViewItemProtocol
+
+extension MainViewController: SelectCollectionViewItemProtocol {
+  func selectItem(date: Date) {
+    getWorkout(date: date)
+  }
+
+
 }
 
 //MARK: - Set Constraints
